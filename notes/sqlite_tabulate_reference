@@ -1,0 +1,348 @@
+# Python `sqlite3` and `tabulate` Reference
+
+## Overview
+
+This document summarizes commonly used functionality from:
+
+* `sqlite3` — Python’s built-in SQLite database interface
+* `tabulate` — a library used to display structured data in table format
+
+These tools are commonly used together when:
+
+1. Retrieving data from a database
+2. Displaying query results in a readable table format
+
+---
+
+# Typical SQLite Workflow
+
+```python
+import sqlite3
+
+conn = sqlite3.connect("database.db")
+cursor = conn.cursor()
+
+cursor.execute("SELECT * FROM table_name")
+
+rows = cursor.fetchall()
+
+conn.close()
+```
+
+Typical steps:
+
+1. Connect to the database
+2. Create a cursor
+3. Execute SQL queries
+4. Retrieve results
+5. Close the connection
+
+---
+
+# sqlite3 Reference
+
+## `sqlite3.connect()`
+
+Creates a connection to a SQLite database file.
+
+```python
+conn = sqlite3.connect("data/weather.db")
+```
+
+If the file does not exist, SQLite will create it automatically.
+
+### Returns
+
+`sqlite3.Connection` object
+
+Used to:
+
+* create cursors
+* commit transactions
+* close the database connection
+
+---
+
+## `Connection.cursor()`
+
+Creates a **cursor object** used to execute SQL statements.
+
+```python
+cursor = conn.cursor()
+```
+
+### Returns
+
+`sqlite3.Cursor`
+
+The cursor:
+
+* sends SQL commands to the database
+* retrieves query results
+
+---
+
+## `cursor.execute()`
+
+Executes a SQL statement.
+
+```python
+cursor.execute("SELECT * FROM weather_data")
+```
+
+Example with parameters:
+
+```python
+cursor.execute(
+    "INSERT INTO weather_data (temperature, windspeed) VALUES (?, ?)",
+    (18.7, 3.2)
+)
+```
+
+### Parameter placeholders
+
+SQLite uses `?` placeholders for parameterized queries.
+
+Benefits:
+
+* prevents SQL injection
+* separates query structure from values
+
+---
+
+## `cursor.fetchall()`
+
+Retrieves **all rows** from the query result.
+
+```python
+rows = cursor.fetchall()
+```
+
+### Returns
+
+List of tuples.
+
+Example:
+
+```python
+[
+    (1, 18.7, 3.2, 0, "2026-03-22 19:00:00"),
+    (2, 19.1, 2.8, 1, "2026-03-22 19:05:00")
+]
+```
+
+Each tuple represents one database row.
+
+---
+
+## `cursor.fetchone()`
+
+Retrieves the **next row** from the result set.
+
+```python
+row = cursor.fetchone()
+```
+
+Example result:
+
+```python
+(1, 18.7, 3.2, 0, "2026-03-22 19:00:00")
+```
+
+Returns `None` when no more rows remain.
+
+---
+
+## `cursor.description`
+
+Provides metadata about the columns returned by a query.
+
+Example:
+
+```python
+print(cursor.description)
+```
+
+Example output:
+
+```
+[
+ ('id', None, None, None, None, None, None),
+ ('temperature', None, None, None, None, None, None),
+ ('windspeed', None, None, None, None, None, None),
+ ('weathercode', None, None, None, None, None, None),
+ ('timestamp', None, None, None, None, None, None)
+]
+```
+
+Column names can be extracted like this:
+
+```python
+columns = [col[0] for col in cursor.description]
+```
+
+---
+
+## `Connection.commit()`
+
+Saves changes to the database.
+
+Required after:
+
+* `INSERT`
+* `UPDATE`
+* `DELETE`
+
+Example:
+
+```python
+conn.commit()
+```
+
+---
+
+## `Connection.close()`
+
+Closes the database connection.
+
+Example:
+
+```python
+conn.close()
+```
+
+Always close connections when finished.
+
+---
+
+# tabulate Reference
+
+The `tabulate` library formats structured data into readable tables.
+
+Installation:
+
+```bash
+pip install tabulate
+```
+
+Import:
+
+```python
+from tabulate import tabulate
+```
+
+---
+
+## `tabulate()`
+
+Formats data into a table string.
+
+Example:
+
+```python
+print(tabulate(rows, headers=columns))
+```
+
+Inputs:
+
+| Argument  | Purpose          |
+| --------- | ---------------- |
+| `rows`    | list of row data |
+| `headers` | column names     |
+
+Example output:
+
+```
+id    temperature    windspeed
+----  -------------  ---------
+1     18.7           3.2
+2     19.1           2.8
+```
+
+---
+
+## `tablefmt`
+
+Controls table style.
+
+Example:
+
+```python
+print(tabulate(rows, headers=columns, tablefmt="grid"))
+```
+
+Example output:
+
+```
++----+-------------+-----------+
+| id | temperature | windspeed |
++----+-------------+-----------+
+| 1  | 18.7        | 3.2       |
+| 2  | 19.1        | 2.8       |
++----+-------------+-----------+
+```
+
+Common formats:
+
+| Format         | Style             |
+| -------------- | ----------------- |
+| `"plain"`      | simple text       |
+| `"grid"`       | boxed table       |
+| `"github"`     | Markdown table    |
+| `"fancy_grid"` | unicode box style |
+
+---
+
+# Example: Displaying a Query Result as a Table
+
+```python
+import sqlite3
+from tabulate import tabulate
+
+conn = sqlite3.connect("data/weather.db")
+cursor = conn.cursor()
+
+cursor.execute("SELECT * FROM weather_data")
+
+rows = cursor.fetchall()
+columns = [col[0] for col in cursor.description]
+
+print(tabulate(rows, headers=columns, tablefmt="grid"))
+
+conn.close()
+```
+
+Example output:
+
+```
++----+-------------+-----------+--------------+---------------------+
+| id | temperature | windspeed | weathercode  | timestamp           |
++----+-------------+-----------+--------------+---------------------+
+| 1  | 18.7        | 3.2       | 0            | 2026-03-22 19:01:23 |
+| 2  | 19.1        | 2.8       | 1            | 2026-03-22 19:05:01 |
++----+-------------+-----------+--------------+---------------------+
+```
+
+---
+
+# Summary
+
+Commonly used `sqlite3` components:
+
+| Function / Attribute | Purpose             |
+| -------------------- | ------------------- |
+| `sqlite3.connect()`  | connect to database |
+| `conn.cursor()`      | create cursor       |
+| `cursor.execute()`   | run SQL query       |
+| `cursor.fetchall()`  | retrieve all rows   |
+| `cursor.fetchone()`  | retrieve single row |
+| `cursor.description` | column metadata     |
+| `conn.commit()`      | save changes        |
+| `conn.close()`       | close connection    |
+
+Commonly used `tabulate` functionality:
+
+| Function                      | Purpose             |
+| ----------------------------- | ------------------- |
+| `tabulate(data, headers=...)` | format table        |
+| `tablefmt`                    | control table style |
